@@ -1,0 +1,45 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Virtualenvs ----
+.venv/
+venv/
+env/
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ---- Project-specific outputs (not part of the app) ----
+*.csv
+!requirements.txt
+classification_metrics.txt
+regression_metrics.txt
+clustering_scatter.png
+scatter_grade_duration.png
+
+# ---- LaTeX build artifacts ----
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.run.xml
+
+# ---- Assistant / internal ----
+.claude/
+CLAUDE.md

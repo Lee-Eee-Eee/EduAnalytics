@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在线学习行为数据分析平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Claude-inspired warm cream palette */
+  --bg:#FAF9F5;            /* main cream background */
+  --bg-sink:#F0EEE6;        /* slightly deeper cream for blocks */
+  --bg-muted:#F5F4EE;       /* quiet surface */
+  --card:#FFFFFF;
+  --ink:#3D3929;            /* warm near-black - Claude body */
+  --ink-2:#61605C;          /* medium warm gray */
+  --ink-3:#8F8C85;          /* soft warm gray */
+  --ink-4:#B5B2AA;
+  --accent:#D97757;         /* Claude signature coral */
+  --accent-2:#C05E3F;
+  --accent-soft:#F2DDD1;
+  --accent-wash:#FBF1EA;
+  --sage:#7A9B85;
+  --indigo:#8591B8;
+  --amber:#C79448;
+  --rose:#B47B7B;
+  --plum:#8C7495;
+  --border:#E8E5DE;
+  --border-soft:#EFECE4;
+  --shadow-sm:0 1px 2px rgba(61,57,41,.04),0 2px 6px rgba(61,57,41,.03);
+  --shadow:0 1px 2px rgba(61,57,41,.04),0 8px 24px rgba(61,57,41,.05);
+  --radius:14px;
+  --radius-sm:10px;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  --font-serif:'Fraunces','Iowan Old Style','Palatino Linotype',Georgia,'Source Han Serif SC','Songti SC',serif;
+  --font-mono:'JetBrains Mono','Fira Code',Consolas,monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"ss01","cv11"}
+
+/* ---- nav ---- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);background:rgba(250,249,245,.78);border-bottom:1px solid var(--border)}
+nav .inner{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:58px}
+nav .logo{font-family:var(--font-serif);font-size:18px;font-weight:500;color:var(--ink);letter-spacing:-.2px;display:flex;align-items:center;gap:10px}
+nav .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+nav .logo em{font-style:normal;color:var(--accent);font-weight:500}
+nav .links{display:flex;gap:2px}
+nav .links a{padding:6px 12px;border-radius:8px;font-size:13px;color:var(--ink-2);text-decoration:none;transition:all .18s;font-weight:500;letter-spacing:-.1px}
+nav .links a:hover{background:var(--accent-wash);color:var(--accent-2)}
+nav .links a.active{background:var(--ink);color:var(--bg)}
+.chat-toggle{padding:7px 16px;border-radius:8px;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all .18s;letter-spacing:-.1px;font-family:inherit}
+.chat-toggle:hover{background:var(--accent-2);box-shadow:0 4px 14px rgba(217,119,87,.28)}
+
+/* ---- main ---- */
+main{max-width:1360px;margin:0 auto;padding:86px 28px 56px}
+section{margin-bottom:68px;scroll-margin-top:84px}
+.section-header{margin-bottom:24px}
+.section-title{font-family:var(--font-serif);font-size:26px;font-weight:500;color:var(--ink);letter-spacing:-.5px;margin-bottom:6px;line-height:1.25}
+.section-title .num{font-family:var(--font-sans);color:var(--accent);font-weight:500;font-size:13px;letter-spacing:.15em;margin-right:14px;vertical-align:middle;text-transform:uppercase}
+.section-desc{color:var(--ink-2);font-size:14px;line-height:1.7;max-width:760px}
+
+/* ---- cards ---- */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:26px;border:1px solid var(--border-soft)}
+.card-title{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:14px;letter-spacing:-.1px}
+.card-subtitle{font-size:12px;color:var(--ink-3);margin-top:-8px;margin-bottom:12px;line-height:1.6}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+
+/* ---- stat cards ---- */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stat-card{border-radius:var(--radius);padding:22px 24px;background:var(--card);border:1px solid var(--border-soft);box-shadow:var(--shadow-sm);position:relative;overflow:hidden;transition:all .2s}
+.stat-card:hover{border-color:var(--border);transform:translateY(-1px);box-shadow:var(--shadow)}
+.stat-card .accent-line{position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.stat-card h3{font-size:12px;color:var(--ink-3);font-weight:500;margin-bottom:8px;letter-spacing:.06em}
+.stat-card .val{font-family:var(--font-serif);font-size:30px;font-weight:500;color:var(--ink);letter-spacing:-.6px;line-height:1.1}
+.stat-card .sub{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.5}
+.tone-1 .accent-line{background:var(--accent)}
+.tone-2 .accent-line{background:var(--rose)}
+.tone-3 .accent-line{background:var(--sage)}
+.tone-4 .accent-line{background:var(--amber)}
+.tone-5 .accent-line{background:var(--indigo)}
+.tone-6 .accent-line{background:var(--plum)}
+
+/* ---- chart containers ---- */
+.chart{width:100%;height:420px}
+.chart-sm{width:100%;height:340px}
+.chart-lg{width:100%;height:500px}
+
+/* ---- table ---- */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:var(--bg-muted);padding:11px 16px;text-align:left;font-weight:500;color:var(--ink-2);border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.04em}
+.data-table td{padding:11px 16px;border-bottom:1px solid var(--border-soft)}
+.data-table tr:hover td{background:var(--bg-muted)}
+
+/* ---- metrics row ---- */
+.metric-row{display:flex;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.metric-pill{padding:16px 22px;border-radius:var(--radius);background:var(--card);text-align:center;flex:1;min-width:140px;border:1px solid var(--border-soft);box-shadow:var(--shadow-sm)}
+.metric-pill .label{font-size:11.5px;color:var(--ink-3);margin-bottom:4px;letter-spacing:.05em}
+.metric-pill .value{font-family:var(--font-serif);font-size:24px;font-weight:500;color:var(--ink);letter-spacing:-.4px}
+
+/* ---- selectors ---- */
+.selector-row{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.selector-row label{font-size:13px;font-weight:500;color:var(--ink-2)}
+.selector-row select{padding:7px 14px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:#fff;outline:none;color:var(--ink);font-family:inherit;cursor:pointer;transition:all .15s}
+.selector-row select:hover{border-color:var(--ink-3)}
+.selector-row select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.corr-badge{display:inline-block;padding:6px 14px;border-radius:8px;background:var(--accent-wash);color:var(--accent-2);font-size:13px;font-weight:500;font-family:var(--font-mono);border:1px solid var(--accent-soft)}
+
+/* ---- cluster cards ---- */
+.cluster-cards{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.cluster-card{flex:1;min-width:200px;border-radius:var(--radius);padding:22px;text-align:center;background:var(--card);border:1px solid var(--border-soft);border-top:3px solid var(--accent);box-shadow:var(--shadow-sm)}
+.cluster-card h4{font-size:12px;color:var(--ink-3);margin-bottom:6px;font-weight:500;letter-spacing:.04em}
+.cluster-card .big{font-family:var(--font-serif);font-size:30px;font-weight:500;color:var(--ink);letter-spacing:-.5px}
+.cluster-card .info{font-size:11.5px;color:var(--ink-3);margin-top:6px}
+
+/* ---- model tabs ---- */
+.model-tabs{display:flex;gap:4px;margin-bottom:18px;background:var(--bg-muted);padding:4px;border-radius:10px;width:fit-content}
+.model-tab{padding:7px 16px;border-radius:7px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;color:var(--ink-2);font-family:inherit}
+.model-tab:hover{color:var(--ink)}
+.model-tab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(61,57,41,.08)}
+
+/* ---- insight box ---- */
+.insight-box{background:var(--accent-wash);border-radius:var(--radius);padding:22px 26px;margin-top:20px;font-size:14px;line-height:1.85;color:var(--ink);border:1px solid var(--accent-soft);border-left:3px solid var(--accent)}
+.insight-box strong{color:var(--accent-2);font-weight:600}
+
+/* ---- chat panel ---- */
+.chat-overlay{position:fixed;inset:0;background:rgba(61,57,41,.18);z-index:200;display:none;opacity:0;transition:opacity .3s;backdrop-filter:blur(3px)}
+.chat-overlay.open{display:block;opacity:1}
+.chat-panel{position:fixed;top:0;right:-480px;width:480px;height:100vh;background:var(--bg);z-index:201;display:flex;flex-direction:column;transition:right .35s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(61,57,41,.08);border-left:1px solid var(--border)}
+.chat-panel.open{right:0}
+.chat-header{padding:18px 24px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between;background:var(--card)}
+.chat-header h3{font-family:var(--font-serif);font-size:17px;font-weight:500;color:var(--ink);letter-spacing:-.2px}
+.chat-close{width:30px;height:30px;border-radius:8px;border:none;background:transparent;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--ink-3);transition:all .15s}
+.chat-close:hover{background:var(--bg-muted);color:var(--ink)}
+.chat-config{padding:14px 24px;background:var(--card);border-bottom:1px solid var(--border-soft)}
+.chat-config .row{display:flex;gap:10px;margin-bottom:6px;align-items:center}
+.chat-config input{flex:1;padding:7px 11px;border-radius:7px;border:1px solid var(--border);font-size:12.5px;background:#fff;color:var(--ink);font-family:inherit;outline:none;transition:all .15s}
+.chat-config input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.chat-config label{font-size:11.5px;color:var(--ink-2);min-width:56px;font-weight:500}
+.chat-config .hint{font-size:10.5px;color:var(--ink-3);margin-top:6px;padding-left:66px;font-style:italic}
+.chat-messages{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:90%;padding:13px 17px;border-radius:14px;font-size:14px;line-height:1.7;word-break:break-word}
+.msg p{margin-bottom:8px}.msg p:last-child{margin-bottom:0}
+.msg pre{background:var(--ink);color:var(--bg-sink);padding:12px;border-radius:8px;overflow-x:auto;font-size:12px;margin:6px 0;font-family:var(--font-mono)}
+.msg code{font-family:var(--font-mono);font-size:.9em}
+.msg-user{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:4px}
+.msg-ai{align-self:flex-start;background:var(--card);color:var(--ink);border-bottom-left-radius:4px;border:1px solid var(--border-soft)}
+.msg-ai table{border-collapse:collapse;margin:6px 0;font-size:12px}
+.msg-ai th,.msg-ai td{border:1px solid var(--border);padding:4px 8px}
+.chat-input-area{padding:14px 20px;border-top:1px solid var(--border-soft);display:flex;gap:10px;background:var(--card)}
+.chat-input-area textarea{flex:1;resize:none;padding:11px 14px;border-radius:10px;border:1px solid var(--border);font-size:14px;font-family:inherit;outline:none;height:44px;max-height:120px;color:var(--ink);line-height:1.5;transition:all .15s;background:var(--bg)}
+.chat-input-area textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash);background:#fff}
+.chat-send{width:44px;height:44px;border-radius:10px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:16px;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.chat-send:hover{background:var(--accent-2)}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;background:var(--ink-3)}
+.typing-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--ink-3);animation:blink 1.4s infinite;margin-right:3px}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* ---- hero ---- */
+.hero{text-align:center;padding:56px 20px 32px}
+.hero-eyebrow{display:inline-block;font-size:12px;color:var(--accent-2);background:var(--accent-wash);padding:5px 13px;border-radius:99px;margin-bottom:22px;letter-spacing:.14em;font-weight:500;text-transform:uppercase;border:1px solid var(--accent-soft)}
+.hero h1{font-family:var(--font-serif);font-size:44px;font-weight:500;color:var(--ink);letter-spacing:-1.2px;margin-bottom:16px;line-height:1.15}
+.hero p{color:var(--ink-2);font-size:15.5px;max-width:640px;margin:0 auto;line-height:1.7}
+.hero .dataset-chip{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:8px 16px;border-radius:99px;background:var(--card);border:1px solid var(--border);font-size:13px;color:var(--ink-2)}
+.hero .dataset-chip strong{color:var(--ink);font-weight:500}
+.hero .dataset-chip .sep{color:var(--ink-4)}
+.hero .dataset-chip button{border:none;background:transparent;color:var(--accent);cursor:pointer;font-size:13px;font-weight:500;padding:0;font-family:inherit}
+.hero .dataset-chip button:hover{text-decoration:underline}
+
+/* ---- upload zone ---- */
+.upload-wrap{max-width:720px;margin:64px auto 48px;padding:0 20px}
+.upload-title{font-family:var(--font-serif);text-align:center;font-size:40px;font-weight:500;color:var(--ink);letter-spacing:-1px;margin-bottom:14px;line-height:1.2}
+.upload-lead{text-align:center;color:var(--ink-2);font-size:15.5px;line-height:1.7;margin-bottom:36px;max-width:560px;margin-left:auto;margin-right:auto}
+.dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--border);border-radius:20px;padding:64px 32px;text-align:center;background:var(--card);transition:all .2s;cursor:pointer;width:100%}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:var(--accent-wash)}
+.dropzone>*{max-width:100%}
+.dropzone-icon{display:block;width:54px;height:54px;margin:0 0 18px 0;color:var(--accent);opacity:.85;flex-shrink:0}
+.dropzone-h{font-family:var(--font-serif);font-size:22px;font-weight:500;color:var(--ink);margin:0 0 8px 0;letter-spacing:-.3px;line-height:1.3}
+.dropzone-sub{font-size:13.5px;color:var(--ink-3);margin:0 0 24px 0;line-height:1.5}
+.dropzone-btn{display:inline-block;padding:10px 24px;border-radius:9px;background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:500;cursor:pointer;transition:all .15s;border:none;font-family:inherit;margin:0}
+.dropzone-btn:hover{background:var(--accent);transform:translateY(-1px)}
+.dropzone input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.upload-meta{margin-top:32px;padding:20px 24px;border-radius:var(--radius);background:var(--bg-muted);border:1px solid var(--border-soft);font-size:13px;color:var(--ink-2);line-height:1.75}
+.upload-meta h4{font-family:var(--font-serif);font-size:15px;font-weight:500;color:var(--ink);margin-bottom:8px}
+.upload-meta code{font-family:var(--font-mono);background:var(--card);padding:1px 6px;border-radius:4px;font-size:12px;color:var(--accent-2)}
+.upload-busy{display:none;text-align:center;padding:28px;font-size:14px;color:var(--ink-2)}
+.upload-busy.show{display:block}
+.upload-error{display:none;padding:14px 20px;background:#FDEFEA;color:#9E3A20;border:1px solid #F2C9B6;border-radius:10px;font-size:13.5px;margin-top:16px}
+.upload-error.show{display:block}
+
+/* ---- responsive ---- */
+@media(max-width:900px){.grid-2,.grid-3,.stat-grid{grid-template-columns:1fr}.chat-panel{width:100vw;right:-100vw}nav .links{display:none}.hero h1{font-size:32px}.upload-title{font-size:28px}}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--ink-4);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--ink-3)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="inner">
+    <div class="logo"><span class="dot"></span><span><em>Edu</em>Analytics</span></div>
+    <div class="links" id="nav-links">
+      <a href="#overview">概览</a>
+      <a href="#correlation">相关</a>
+      <a href="#scatter">散点</a>
+      <a href="#group">分组</a>
+      <a href="#clustering">聚类</a>
+      <a href="#regression">回归</a>
+      <a href="#classification">分类</a>
+    </div>
+    <button class="chat-toggle" onclick="toggleChat()">AI 助手</button>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- EMPTY STATE: UPLOAD                                           -->
+<!-- ============================================================ -->
+<main id="empty-view" style="display:none">
+  <div class="upload-wrap">
+    <h1 class="upload-title">开始你的学习行为分析</h1>
+    <p class="upload-lead">将 Coursera MOOC 学生会话 CSV 文件拖入下方区域，系统将自动完成数据清洗、相关性分析、聚类、回归与分类建模。</p>
+
+    <div class="dropzone" id="dropzone" role="button" tabindex="0">
+      <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <div class="dropzone-h">拖入 CSV 文件</div>
+      <div class="dropzone-sub">或点击下方按钮选择文件 · 文件最大 64 MB</div>
+      <button type="button" class="dropzone-btn" id="browse-btn">选择文件</button>
+      <input id="file-input" type="file" accept=".csv">
+    </div>
+
+    <div class="upload-busy" id="upload-busy">
+      <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+      &nbsp;正在分析数据，请稍候…
+    </div>
+    <div class="upload-error" id="upload-error"></div>
+
+    <div class="upload-meta">
+      <h4>CSV 应包含的关键列</h4>
+      必需：<code>grade</code>（成绩）。<br>
+      推荐：<code>duration</code>、<code>page_views</code>、<code>video_views</code>、<code>lecture_item_views</code>、<code>forum_posts_count</code>、<code>forum_comments_count</code>、<code>registration_time</code>、<code>last_access_time</code>、<code>timezone</code>、<code>deleted</code>。
+    </div>
+  </div>
+</main>
+
+<!-- ============================================================ -->
+<!-- DATA VIEW                                                     -->
+<!-- ============================================================ -->
+<main id="data-view" style="display:none">
+  <div class="hero">
+    <span class="hero-eyebrow">Coursera MOOC · 行为数据分析</span>
+    <h1>在线学习行为数据分析平台</h1>
+    <p>剔除退课学生后，深入挖掘学习时长、参与行为、地区分布与最终成绩之间的真实关系。</p>
+    <div class="dataset-chip">
+      <span>当前数据</span>
+      <span class="sep">·</span>
+      <strong id="dataset-name"></strong>
+      <span class="sep">·</span>
+      <button onclick="resetDataset()">更换文件</button>
+    </div>
+  </div>
+
+  <!-- ===== 01 数据概览 ===== -->
+  <section id="overview">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">01</span>数据概览</h2>
+      <p class="section-desc">剔除 grade = 0 的退课 / 未参与学生后，对剩余活跃群体的关键指标与分布形态进行总览。</p>
+    </div>
+    <div class="stat-grid" id="stat-cards"></div>
+    <div class="stat-grid" id="stat-cards-2" style="margin-top:14px"></div>
+    <div class="grid-2" style="margin-top:26px">
+      <div class="card">
+        <div class="card-title">成绩分布 (活跃学生)</div>
+        <div id="chart-grade-dist" class="chart-sm"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">行为特征箱线图</div>
+        <p class="card-subtitle">各特征归一化至 0–100% 进行对比，悬停查看原始值</p>
+        <div id="chart-boxplot" class="chart-sm"></div>
+      </div>
+    </div>
+    <div class="insight-box" style="margin-top:22px" id="overview-insight"></div>
+  </section>
+
+  <!-- ===== 02 相关分析 ===== -->
+  <section id="correlation">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">02</span>相关性分析</h2>
+      <p class="section-desc">Pearson 相关系数 · 已排除与成绩循环相关的 quiz_score_sum (r ≈ 0.99) 以及全缺失的 assignment_score_sum。</p>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">相关系数热力图</div><div id="chart-heatmap" class="chart-lg"></div></div>
+      <div class="card"><div class="card-title">与成绩的相关系数排序</div><div id="chart-grade-corr" class="chart-lg"></div></div>
+    </div>
+  </section>
+
+  <!-- ===== 03 散点图 ===== -->
+  <section id="scatter">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">03</span>散点图分析</h2>
+      <p class="section-desc">探索各行为变量与成绩之间的关系 (支持缩放拖拽)。</p>
+    </div>
+    <div class="card">
+      <div class="selector-row">
+        <label>X 轴变量</label>
+        <select id="scatter-select" onchange="updateScatter()"></select>
+        <span id="corr-display" class="corr-badge">r = 0</span>
+      </div>
+      <div id="chart-scatter" class="chart-lg"></div>
+    </div>
+  </section>
+
+  <!-- ===== 04 分组对比 ===== -->
+  <section id="group">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">04</span>分组对比分析</h2>
+      <p class="section-desc">地区、账户状态、活跃天数与成绩之间真正具有研究价值的差异。</p>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">各地区成绩 &amp; 三率对比</div><div id="chart-region-grade" class="chart"></div></div>
+      <div class="card"><div class="card-title">各地区退课率</div><div id="chart-region-dropout" class="chart"></div></div>
+    </div>
+    <div class="grid-2" style="margin-top:20px">
+      <div class="card"><div class="card-title">账户状态 vs 成绩</div><div id="chart-deleted-grade" class="chart-sm"></div></div>
+      <div class="card"><div class="card-title">活跃天数分箱 vs 成绩</div><div id="chart-span-grade" class="chart-sm"></div></div>
+    </div>
+    <div class="insight-box" style="margin-top:22px" id="group-insight"></div>
+  </section>
+
+  <!-- ===== 05 聚类分析 ===== -->
+  <section id="clustering">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">05</span>聚类分析</h2>
+      <p class="section-desc">KMeans 聚类 · 基于行为特征将学生分群。</p>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">肘部法则 &amp; 轮廓系数</div><div id="chart-elbow" class="chart"></div></div>
+      <div class="card"><div class="card-title">PCA 二维聚类可视化</div><div id="chart-cluster-scatter" class="chart"></div></div>
+    </div>
+    <div id="cluster-stat-cards" class="cluster-cards" style="margin-top:22px"></div>
+    <div class="card" style="margin-top:20px"><div class="card-title">各簇行为特征雷达图</div><div id="chart-radar" class="chart"></div></div>
+  </section>
+
+  <!-- ===== 06 回归分析 ===== -->
+  <section id="regression">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">06</span>回归分析</h2>
+      <p class="section-desc">多元线性回归 · 预测成绩与特征贡献度。</p>
+    </div>
+    <div class="metric-row" id="reg-metrics"></div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">回归系数</div><div id="chart-reg-coef" class="chart"></div></div>
+      <div class="card"><div class="card-title">预测值 vs 实际值</div><div id="chart-reg-pred" class="chart"></div></div>
+    </div>
+    <div class="card" style="margin-top:20px"><div class="card-title">残差分布</div><div id="chart-residual" class="chart-sm"></div></div>
+  </section>
+
+  <!-- ===== 07 分类分析 ===== -->
+  <section id="classification">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">07</span>分类分析</h2>
+      <p class="section-desc">三种算法对比 · 逻辑回归 / 决策树 / MLP 神经网络。</p>
+    </div>
+    <div class="card" style="margin-bottom:20px"><div class="card-title">模型性能对比</div><div id="chart-model-compare" class="chart-sm"></div></div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">详细指标</div>
+      <table class="data-table" id="clf-table"><thead><tr><th>模型</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">混淆矩阵</div>
+        <div class="model-tabs" id="cm-tabs"></div>
+        <div style="display:flex;justify-content:center"><div id="chart-confusion" class="chart-sm" style="width:360px;height:360px"></div></div>
+      </div>
+      <div class="card"><div class="card-title">决策树特征重要性</div><div id="chart-dt-importance" class="chart-sm"></div></div>
+    </div>
+  </section>
+</main>
+
+<!-- CHAT PANEL -->
+<div class="chat-overlay" id="chat-overlay" onclick="toggleChat()"></div>
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-header"><h3>AI 数据分析助手</h3><button class="chat-close" onclick="toggleChat()">&times;</button></div>
+  <div class="chat-config">
+    <div class="row"><label>API 地址</label><input id="cfg-base" placeholder="https://api.openai.com/v1"></div>
+    <div class="row"><label>API 密钥</label><input id="cfg-key" type="password" placeholder="sk-..."></div>
+    <div class="row"><label>模型</label><input id="cfg-model" placeholder="gpt-4o-mini"></div>
+    <div class="hint">配置会保存在本地浏览器中，下次打开自动恢复</div>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="msg msg-ai">你好，我是基于当前数据集的 AI 助手。分析已剔除退课学生 (grade = 0) 并排除循环指标，聚焦真实的学习行为与成绩关系。配置 API 后即可开始对话。</div>
+  </div>
+  <div class="chat-input-area">
+    <textarea id="chat-input" placeholder="输入问题..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+    <button class="chat-send" id="chat-send-btn" onclick="sendChat()">&#x27A4;</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SCRIPT                                                        -->
+<!-- ============================================================ -->
+<script>
+const D = {{ data_json | safe }};
+const HAS_DATA = !!(D && D.overview);
+
+/* ---- Claude-inspired palette for charts ---- */
+const COLORS = ['#D97757','#8591B8','#7A9B85','#C79448','#B47B7B','#8C7495','#6B8C8C','#9B7E5E'];
+const CLUSTER_COLORS = ['#D97757','#C79448','#7A9B85','#8591B8','#B47B7B'];
+const AXIS_COLOR = '#8F8C85';
+const LABEL_COLOR = '#3D3929';
+const SPLIT_LINE = {lineStyle:{color:'#EFECE4'}};
+const TEXT_STYLE = {color:AXIS_COLOR,fontFamily:"'Inter',sans-serif"};
+
+echarts && echarts.registerTheme && echarts.registerTheme('edu',{textStyle:TEXT_STYLE,color:COLORS});
+
+function fmt(v,d=2){return v==null?'-':Number(v).toFixed(d)}
+function pct(v){return v==null?'-':(v*100).toFixed(1)+'%'}
+function initChart(id){return echarts.init(document.getElementById(id),'edu')}
+const allCharts=[];
+function reg(c){allCharts.push(c);return c}
+window.addEventListener('resize',()=>allCharts.forEach(c=>c.resize()));
+
+/* ========== upload handling ========== */
+(function(){
+  const dz=document.getElementById('dropzone');
+  const input=document.getElementById('file-input');
+  const busy=document.getElementById('upload-busy');
+  const errBox=document.getElementById('upload-error');
+
+  if(!dz) return;
+
+  function showErr(msg){errBox.textContent=msg;errBox.classList.add('show')}
+  function hideErr(){errBox.classList.remove('show')}
+
+  function doUpload(file){
+    if(!file){showErr('没有选择文件');return}
+    if(!/\.csv$/i.test(file.name)){showErr('请选择 .csv 文件');return}
+    hideErr();
+    busy.classList.add('show');
+    dz.style.pointerEvents='none';
+    dz.style.opacity='.5';
+    const fd=new FormData();fd.append('file',file);
+    fetch('/api/upload',{method:'POST',body:fd})
+      .then(async r=>{
+        if(r.ok){location.reload();return}
+        const e=await r.json().catch(()=>({error:'上传失败'}));
+        showErr(e.error||'上传失败');
+      })
+      .catch(e=>showErr('网络错误: '+e.message))
+      .finally(()=>{busy.classList.remove('show');dz.style.pointerEvents='';dz.style.opacity='';});
+  }
+
+  input.addEventListener('change',e=>{if(e.target.files[0])doUpload(e.target.files[0])});
+  document.getElementById('browse-btn').addEventListener('click',e=>{e.stopPropagation();input.click()});
+  dz.addEventListener('click',e=>{if(e.target.id!=='browse-btn')input.click()});
+  dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('drag')}));
+  dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)doUpload(f)});
+})();
+
+function resetDataset(){
+  if(confirm('确定要上传新的数据文件？当前分析结果将被替换。')){
+    fetch('/api/reset',{method:'POST'}).finally(()=>location.reload());
+  }
+}
+
+/* ========== API config persistence ========== */
+const CFG_KEYS={base:'eduanalytics_api_base',key:'eduanalytics_api_key',model:'eduanalytics_api_model'};
+(function(){
+  const base=document.getElementById('cfg-base');
+  const key=document.getElementById('cfg-key');
+  const model=document.getElementById('cfg-model');
+  try{
+    base.value=localStorage.getItem(CFG_KEYS.base)||'';
+    key.value=localStorage.getItem(CFG_KEYS.key)||'';
+    model.value=localStorage.getItem(CFG_KEYS.model)||'gpt-4o-mini';
+  }catch(e){}
+  function persist(el,k){el.addEventListener('input',()=>{try{localStorage.setItem(k,el.value)}catch(e){}})}
+  persist(base,CFG_KEYS.base);persist(key,CFG_KEYS.key);persist(model,CFG_KEYS.model);
+})();
+
+/* ========== top-level state switch ========== */
+if(!HAS_DATA){
+  document.getElementById('empty-view').style.display='block';
+} else {
+  document.getElementById('data-view').style.display='block';
+  document.getElementById('dataset-name').textContent=D.csv_name||'(未知)';
+  renderDashboard();
+}
+
+/* ============================================================ */
+/* Dashboard rendering                                           */
+/* ============================================================ */
+function renderDashboard(){
+  const CN=D.column_cn;
+
+  /* ========== 01 数据概览 ========== */
+  (function(){
+    const o=D.overview;
+    document.getElementById('stat-cards').innerHTML=[
+      {l:'总注册人数',v:o.total_registered.toLocaleString(),s:'数据集原始记录',t:'tone-1'},
+      {l:'实际参与学习',v:o.n_active.toLocaleString(),s:'占比 '+pct(o.n_active/o.total_registered),t:'tone-3'},
+      {l:'退课 / 未参与',v:o.n_zero.toLocaleString(),s:'退课率 '+pct(o.dropout_rate),t:'tone-2'},
+    ].map(c=>`<div class="stat-card ${c.t}"><span class="accent-line"></span><h3>${c.l}</h3><div class="val">${c.v}</div><div class="sub">${c.s}</div></div>`).join('');
+
+    document.getElementById('stat-cards-2').innerHTML=[
+      {l:'及格率 ≥ 60',v:pct(o.pass_rate),s:'平均 '+fmt(o.avg_grade,1)+' · 中位数 '+fmt(o.median_grade,1),t:'tone-4'},
+      {l:'优秀率 ≥ 80',v:pct(o.excellent_rate),s:'标准差 '+fmt(o.std_grade,1),t:'tone-5'},
+      {l:'拔尖率 ≥ 90',v:pct(o.top_rate),s:'最高水平学生占比',t:'tone-6'},
+    ].map(c=>`<div class="stat-card ${c.t}"><span class="accent-line"></span><h3>${c.l}</h3><div class="val">${c.v}</div><div class="sub">${c.s}</div></div>`).join('');
+
+    document.getElementById('overview-insight').innerHTML=
+      `<strong>关键发现 · </strong>总注册人数中仅 <strong>${pct(o.n_active/o.total_registered)}</strong> 的学生实际参与了学习 (成绩 &gt; 0)，其余为退课或从未开始学习的学生。这一高退课率是 MOOC 的典型现象，后续分析均基于活跃学生群体，以确保结论有效性。`;
+
+    const ch1=reg(initChart('chart-grade-dist'));
+    ch1.setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+      xAxis:{type:'category',data:o.grade_hist.bins.map(v=>fmt(v,0)),name:'成绩',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR}},
+      yAxis:{type:'value',name:'人数',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series:[{type:'bar',data:o.grade_hist.counts,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#E79A7E'},{offset:1,color:'#D97757'}]),borderRadius:[3,3,0,0]}}],
+      grid:{containLabel:true,left:12,right:12,bottom:24,top:16}
+    });
+
+    const ch2=reg(initChart('chart-boxplot'));
+    const bp=o.boxplot;
+    const bpN=bp.map(d=>{
+      const range=d.max-d.min||1;
+      return {name:d.name,data:[0,(d.q1-d.min)/range*100,(d.median-d.min)/range*100,(d.q3-d.min)/range*100,100],raw:[d.min,d.q1,d.median,d.q3,d.max]};
+    });
+    ch2.setOption({
+      tooltip:{trigger:'item',formatter:p=>{
+        const r=bpN[p.dataIndex].raw;
+        return `<b>${bpN[p.dataIndex].name}</b><br/>最小值: ${fmt(r[0],1)}<br/>Q1: ${fmt(r[1],1)}<br/>中位数: ${fmt(r[2],1)}<br/>Q3: ${fmt(r[3],1)}<br/>P95: ${fmt(r[4],1)}`;
+      }},
+      xAxis:{type:'category',data:bpN.map(d=>d.name),axisLabel:{fontSize:10,color:AXIS_COLOR,rotate:20,interval:0},axisTick:{alignWithLabel:true}},
+      yAxis:{type:'value',name:'归一化 (%)',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR,formatter:v=>v+'%'},splitLine:SPLIT_LINE,max:100,min:0},
+      series:[{type:'boxplot',data:bpN.map(d=>d.data),itemStyle:{color:'#FBF1EA',borderColor:'#D97757',borderWidth:2}}],
+      grid:{containLabel:true,left:12,right:16,bottom:16,top:24}
+    });
+  })();
+
+  /* ========== 02 相关分析 ========== */
+  (function(){
+    const c=D.correlation,cols=c.columns,n=cols.length,data=[];
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++)data.push([j,i,c.matrix[i][j]]);
+
+    const ch1=reg(initChart('chart-heatmap'));
+    ch1.setOption({
+      tooltip:{formatter:p=>cols[p.value[1]]+' × '+cols[p.value[0]]+'<br>r = '+fmt(p.value[2],4)},
+      xAxis:{type:'category',data:cols,axisLabel:{fontSize:10,color:AXIS_COLOR,rotate:35,interval:0}},
+      yAxis:{type:'category',data:cols,axisLabel:{fontSize:10,color:AXIS_COLOR}},
+      visualMap:{min:-1,max:1,calculable:true,orient:'horizontal',left:'center',bottom:0,inRange:{color:['#5E6A88','#8591B8','#D6DAE4','#FAF9F5','#F4DCCD','#D97757','#9E4A2B']},textStyle:{fontSize:11,color:AXIS_COLOR}},
+      series:[{type:'heatmap',data,label:{show:n<=10,formatter:p=>fmt(p.value[2],2),fontSize:10},emphasis:{itemStyle:{shadowBlur:10}}}],
+      grid:{containLabel:true,left:8,right:8,bottom:64,top:8}
+    });
+
+    const gc=c.grade_corr;
+    const ch2=reg(initChart('chart-grade-corr'));
+    ch2.setOption({
+      tooltip:{formatter:p=>p.name+': r = '+fmt(p.value,4)},
+      xAxis:{type:'value',name:'相关系数',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      yAxis:{type:'category',data:gc.map(g=>g.feature),inverse:true,axisLabel:{fontSize:12,color:LABEL_COLOR}},
+      series:[{type:'bar',data:gc.map(g=>({value:g.value,itemStyle:{color:g.value>=0?'#D97757':'#8591B8'}})),barWidth:22,label:{show:true,position:'right',formatter:p=>fmt(p.value,4),fontSize:11,color:LABEL_COLOR}}],
+      grid:{containLabel:true,left:8,right:64,bottom:24,top:8}
+    });
+  })();
+
+  /* ========== 03 散点图 ========== */
+  window.scatterChart=(function(){
+    const sel=document.getElementById('scatter-select');
+    D.behavior_features.forEach(f=>{if(D.scatter.data[f]){const o=document.createElement('option');o.value=f;o.textContent=CN[f]||f;sel.appendChild(o)}});
+    const ch=reg(initChart('chart-scatter'));
+    return ch;
+  })();
+  window.updateScatter=function(){
+    const col=document.getElementById('scatter-select').value;
+    const x=D.scatter.data[col],y=D.scatter.data.grade;
+    const r=D.scatter.correlations[col];
+    document.getElementById('corr-display').textContent='r = '+fmt(r,4);
+    const n=x.length;let sx=0,sy=0,sxx=0,sxy=0;
+    for(let i=0;i<n;i++){sx+=x[i];sy+=y[i];sxx+=x[i]*x[i];sxy+=x[i]*y[i]}
+    const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx),intercept=(sy-slope*sx)/n;
+    const xMin=Math.min(...x),xMax=Math.max(...x);
+    window.scatterChart.setOption({
+      tooltip:{formatter:p=>(CN[col]||col)+': '+fmt(p.value[0],0)+'<br>成绩: '+fmt(p.value[1],2)},
+      xAxis:{type:'value',name:CN[col]||col,nameLocation:'middle',nameGap:34,nameTextStyle:{fontSize:13,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      yAxis:{type:'value',name:'成绩',nameTextStyle:{fontSize:13,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series:[
+        {type:'scatter',data:x.map((v,i)=>[v,y[i]]),symbolSize:5,itemStyle:{color:'rgba(217,119,87,.3)'},large:true,largeThreshold:2000},
+        {type:'line',data:[[xMin,slope*xMin+intercept],[xMax,slope*xMax+intercept]],lineStyle:{color:'#8591B8',width:2,type:'dashed'},symbol:'none',tooltip:{show:false}}
+      ],
+      grid:{containLabel:true,left:12,right:16,bottom:56,top:12},
+      dataZoom:[{type:'inside'},{type:'slider',bottom:5,height:18,fillerColor:'rgba(217,119,87,.15)',borderColor:'#E8E5DE',handleStyle:{color:'#D97757'}}]
+    },true);
+  };
+  updateScatter();
+
+  /* ========== 04 分组对比 ========== */
+  (function(){
+    const g=D.group;
+
+    const rs=g.region_stats;
+    const ch1=reg(initChart('chart-region-grade'));
+    ch1.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      xAxis:{type:'category',data:rs.map(r=>r.region+'\n(n='+r.count+')'),axisLabel:{fontSize:11,color:AXIS_COLOR,lineHeight:16}},
+      yAxis:[
+        {type:'value',name:'成绩',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+        {type:'value',name:'比率',position:'right',min:0,max:1,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{formatter:v=>pct(v),fontSize:11,color:AXIS_COLOR},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'平均成绩',type:'bar',data:rs.map(r=>r.avg_grade),barWidth:28,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#E79A7E'},{offset:1,color:'#D97757'}]),borderRadius:[4,4,0,0]},label:{show:true,position:'top',formatter:p=>fmt(p.value,1),fontSize:10,color:LABEL_COLOR}},
+        {name:'及格率',type:'line',yAxisIndex:1,data:rs.map(r=>r.pass_rate),symbol:'circle',symbolSize:8,lineStyle:{color:'#C79448',width:2.5},itemStyle:{color:'#C79448'}},
+        {name:'优秀率',type:'line',yAxisIndex:1,data:rs.map(r=>r.excellent_rate),symbol:'diamond',symbolSize:8,lineStyle:{color:'#7A9B85',width:2.5},itemStyle:{color:'#7A9B85'}},
+        {name:'拔尖率',type:'line',yAxisIndex:1,data:rs.map(r=>r.top_rate),symbol:'triangle',symbolSize:8,lineStyle:{color:'#B47B7B',width:2.5},itemStyle:{color:'#B47B7B'}}
+      ],
+      grid:{containLabel:true,left:8,right:8,bottom:16,top:40}
+    });
+
+    const rd=g.region_dropout;
+    const ch2=reg(initChart('chart-region-dropout'));
+    ch2.setOption({
+      tooltip:{formatter:p=>{const d=rd[p.dataIndex];return d.region+'<br>总注册: '+d.total+'<br>实际参与: '+d.active+'<br>退课率: '+pct(d.dropout_rate)}},
+      xAxis:{type:'category',data:rd.map(r=>r.region),axisLabel:{fontSize:12,color:AXIS_COLOR}},
+      yAxis:{type:'value',name:'退课率',min:0,max:1,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{formatter:v=>pct(v),fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series:[{type:'bar',data:rd.map(r=>({value:r.dropout_rate,itemStyle:{color:r.dropout_rate>0.9?'#B47B7B':r.dropout_rate>0.85?'#C79448':'#7A9B85'}})),barWidth:40,label:{show:true,position:'top',formatter:p=>pct(p.value),fontSize:12,fontWeight:600,color:LABEL_COLOR},itemStyle:{borderRadius:[4,4,0,0]}}],
+      grid:{containLabel:true,left:12,right:12,bottom:12,top:12}
+    });
+
+    const ds=g.deleted_stats;
+    const ch3=reg(initChart('chart-deleted-grade'));
+    ch3.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      xAxis:{type:'category',data:ds.map(d=>d.status+'\n(n='+d.count+')'),axisLabel:{fontSize:12,color:AXIS_COLOR,lineHeight:16}},
+      yAxis:[
+        {type:'value',name:'成绩',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+        {type:'value',name:'比率',position:'right',min:0,max:1,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{formatter:v=>pct(v),fontSize:11,color:AXIS_COLOR},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'平均成绩',type:'bar',data:ds.map(d=>d.avg_grade),barWidth:40,itemStyle:{color:'#D97757',borderRadius:[4,4,0,0]},label:{show:true,position:'top',formatter:p=>fmt(p.value,1),fontSize:13,fontWeight:700,color:LABEL_COLOR}},
+        {name:'及格率',type:'line',yAxisIndex:1,data:ds.map(d=>d.pass_rate),symbol:'circle',symbolSize:10,lineStyle:{color:'#C79448',width:3},itemStyle:{color:'#C79448'}},
+        {name:'优秀率',type:'line',yAxisIndex:1,data:ds.map(d=>d.excellent_rate),symbol:'diamond',symbolSize:10,lineStyle:{color:'#7A9B85',width:3},itemStyle:{color:'#7A9B85'}},
+        {name:'拔尖率',type:'line',yAxisIndex:1,data:ds.map(d=>d.top_rate),symbol:'triangle',symbolSize:10,lineStyle:{color:'#B47B7B',width:3},itemStyle:{color:'#B47B7B'}}
+      ],
+      grid:{containLabel:true,left:8,right:8,bottom:16,top:40}
+    });
+
+    const ss=g.span_stats;
+    const ch4=reg(initChart('chart-span-grade'));
+    ch4.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      xAxis:{type:'category',data:ss.map(s=>s.bin+'\n(n='+s.count+')'),axisLabel:{fontSize:11,color:AXIS_COLOR,lineHeight:16}},
+      yAxis:[
+        {type:'value',name:'成绩',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+        {type:'value',name:'比率',position:'right',min:0,max:1,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{formatter:v=>pct(v),fontSize:11,color:AXIS_COLOR},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'平均成绩',type:'bar',data:ss.map(s=>s.avg_grade),barWidth:32,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#8FB39D'},{offset:1,color:'#7A9B85'}]),borderRadius:[4,4,0,0]},label:{show:true,position:'top',formatter:p=>fmt(p.value,1),fontSize:11,color:LABEL_COLOR}},
+        {name:'及格率',type:'line',yAxisIndex:1,data:ss.map(s=>s.pass_rate),symbol:'circle',symbolSize:8,lineStyle:{color:'#C79448',width:2.5},itemStyle:{color:'#C79448'}},
+        {name:'优秀率',type:'line',yAxisIndex:1,data:ss.map(s=>s.excellent_rate),symbol:'diamond',symbolSize:8,lineStyle:{color:'#7A9B85',width:2.5},itemStyle:{color:'#7A9B85'}},
+        {name:'拔尖率',type:'line',yAxisIndex:1,data:ss.map(s=>s.top_rate),symbol:'triangle',symbolSize:8,lineStyle:{color:'#B47B7B',width:2.5},itemStyle:{color:'#B47B7B'}}
+      ],
+      grid:{containLabel:true,left:8,right:8,bottom:16,top:40}
+    });
+
+    const bestRegion=rs.reduce((a,b)=>a.avg_grade>b.avg_grade?a:b);
+    const worstRegion=rs.reduce((a,b)=>a.avg_grade<b.avg_grade?a:b);
+    const retainedD=ds.find(d=>d.deleted===0)||{};
+    const deletedD=ds.find(d=>d.deleted===1)||{};
+    const bestSpan=ss.reduce((a,b)=>a.avg_grade>b.avg_grade?a:b);
+    const asiaR=rs.find(r=>r.region==='亚洲');
+    const americaR=rs.find(r=>r.region==='美洲');
+    document.getElementById('group-insight').innerHTML=
+      '<strong>分组对比关键发现 · </strong><br>'+
+      `1. <strong>地区差异</strong>: ${bestRegion.region}学生平均成绩最高 (${fmt(bestRegion.avg_grade,1)} 分)，${worstRegion.region}最低 (${fmt(worstRegion.avg_grade,1)} 分)。亚洲学生的中位数 (${fmt(asiaR?asiaR.median_grade:0,1)}) 显著高于美洲 (${fmt(americaR?americaR.median_grade:0,1)})，说明亚洲学生整体完成度更高。<br>`+
+      `2. <strong>账户状态</strong>: 保留账户学生平均成绩 (${fmt(retainedD.avg_grade,1)}) 远高于已删除账户 (${fmt(deletedD.avg_grade,1)})，差距约 ${fmt((retainedD.avg_grade||0)-(deletedD.avg_grade||0),0)} 分。删除账户与低参与度高度相关。<br>`+
+      `3. <strong>活跃天数</strong>: 活跃 ${bestSpan.bin} 的学生成绩最好 (平均 ${fmt(bestSpan.avg_grade,1)} 分)，说明持续参与是成功的关键因素。`;
+  })();
+
+  /* ========== 05 聚类分析 ========== */
+  (function(){
+    const cl=D.clustering;
+    const ch1=reg(initChart('chart-elbow'));
+    ch1.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{data:['Inertia','轮廓系数'],top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      xAxis:{type:'category',data:cl.elbow.map(e=>e.k),name:'K 值',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:12,color:AXIS_COLOR}},
+      yAxis:[
+        {type:'value',name:'Inertia',position:'left',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+        {type:'value',name:'轮廓系数',position:'right',min:0,max:1,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'Inertia',type:'line',data:cl.elbow.map(e=>e.inertia),symbol:'circle',symbolSize:8,lineStyle:{color:'#D97757',width:3},itemStyle:{color:'#D97757'}},
+        {name:'轮廓系数',type:'line',yAxisIndex:1,data:cl.elbow.map(e=>e.silhouette),symbol:'diamond',symbolSize:8,lineStyle:{color:'#C79448',width:3},itemStyle:{color:'#C79448'}}
+      ],
+      grid:{containLabel:true,left:8,right:8,bottom:24,top:40}
+    });
+
+    const ch2=reg(initChart('chart-cluster-scatter'));
+    const sm={};cl.pca_points.forEach(p=>{if(!sm[p.cluster])sm[p.cluster]=[];sm[p.cluster].push([p.x,p.y,p.grade])});
+    const series=Object.keys(sm).map((k,i)=>({name:'簇 '+k,type:'scatter',data:sm[k],symbolSize:5,itemStyle:{color:CLUSTER_COLORS[i%CLUSTER_COLORS.length],opacity:.55}}));
+    ch2.setOption({
+      tooltip:{formatter:p=>p.seriesName+'<br>成绩: '+fmt(p.value[2],1)},
+      legend:{top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      xAxis:{type:'value',name:'PC1 ('+pct(cl.pca_explained[0])+')',nameLocation:'middle',nameGap:30,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      yAxis:{type:'value',name:'PC2 ('+pct(cl.pca_explained[1])+')',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series,
+      grid:{containLabel:true,left:8,right:12,bottom:28,top:40}
+    });
+
+    document.getElementById('cluster-stat-cards').innerHTML=cl.cluster_stats.map((s,i)=>{
+      const c=CLUSTER_COLORS[i%CLUSTER_COLORS.length];
+      return `<div class="cluster-card" style="border-top-color:${c}"><h4>簇 ${s.cluster}</h4><div class="big">${s.count}</div><div class="info">平均成绩 ${fmt(s.avg_grade,1)} · 中位数 ${fmt(s.median_grade,1)}</div></div>`;
+    }).join('');
+
+    const ch3=reg(initChart('chart-radar'));
+    const indicator=cl.feature_cn.map(name=>({name,max:1}));
+    const radarSeries=cl.cluster_stats.map((s,i)=>({value:cl.feature_names.map(f=>s[f+'_norm']),name:'簇 '+s.cluster+' (n='+s.count+')',areaStyle:{opacity:.12},lineStyle:{width:2},itemStyle:{color:CLUSTER_COLORS[i%CLUSTER_COLORS.length]}}));
+    ch3.setOption({
+      tooltip:{},
+      legend:{top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      radar:{indicator,radius:'60%',center:['50%','55%'],axisName:{color:AXIS_COLOR,fontSize:11},splitArea:{areaStyle:{color:['#FFFFFF','#FBFAF5','#F5F4EE','#F0EEE6']}},splitLine:{lineStyle:{color:'#E8E5DE'}}},
+      series:[{type:'radar',data:radarSeries}]
+    });
+  })();
+
+  /* ========== 06 回归分析 ========== */
+  (function(){
+    const r=D.regression;
+    document.getElementById('reg-metrics').innerHTML=[
+      {l:'R² 决定系数',v:fmt(r.r2,4)},{l:'MSE 均方误差',v:fmt(r.mse,2)},{l:'MAE 平均绝对误差',v:fmt(r.mae,2)},{l:'截距',v:fmt(r.intercept,4)}
+    ].map(m=>`<div class="metric-pill"><div class="label">${m.l}</div><div class="value">${m.v}</div></div>`).join('');
+
+    const ch1=reg(initChart('chart-reg-coef'));
+    const coefs=r.coefficients;
+    ch1.setOption({
+      tooltip:{formatter:p=>p.name+': '+fmt(p.value,6)},
+      xAxis:{type:'value',name:'系数',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      yAxis:{type:'category',data:coefs.map(c=>c.feature),inverse:true,axisLabel:{fontSize:12,color:LABEL_COLOR}},
+      series:[{type:'bar',data:coefs.map(c=>({value:c.coef,itemStyle:{color:c.coef>=0?'#D97757':'#8591B8'}})),barWidth:22,label:{show:true,position:'right',formatter:p=>fmt(p.value,4),fontSize:11,color:LABEL_COLOR}}],
+      grid:{containLabel:true,left:8,right:64,bottom:24,top:8}
+    });
+
+    const ch2=reg(initChart('chart-reg-pred'));
+    const preds=r.predictions;const allVals=preds.reduce((a,p)=>{a.push(p.actual,p.predicted);return a},[]);
+    const lo=Math.min(...allVals),hi=Math.max(...allVals);
+    ch2.setOption({
+      tooltip:{formatter:p=>'实际: '+fmt(p.value[0],1)+'<br>预测: '+fmt(p.value[1],1)},
+      xAxis:{type:'value',name:'实际成绩',nameLocation:'middle',nameGap:34,min:lo,max:hi,nameTextStyle:{fontSize:13,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      yAxis:{type:'value',name:'预测成绩',min:lo,max:hi,nameTextStyle:{fontSize:13,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series:[
+        {type:'scatter',data:preds.map(p=>[p.actual,p.predicted]),symbolSize:5,itemStyle:{color:'rgba(217,119,87,.3)'}},
+        {type:'line',data:[[lo,lo],[hi,hi]],lineStyle:{color:'#8591B8',width:2,type:'dashed'},symbol:'none',tooltip:{show:false}}
+      ],
+      grid:{containLabel:true,left:12,right:16,bottom:32,top:12}
+    });
+
+    const ch3=reg(initChart('chart-residual'));
+    const resArr=r.residuals.filter(v=>v!=null);
+    const resMin=Math.min(...resArr),resMax=Math.max(...resArr),step=(resMax-resMin)/30;
+    const resBins=[];for(let i=0;i<30;i++)resBins.push({lo:resMin+i*step,hi:resMin+(i+1)*step,count:0});
+    resArr.forEach(v=>{const idx=Math.min(Math.floor((v-resMin)/step),29);resBins[idx].count++});
+    ch3.setOption({
+      tooltip:{trigger:'axis'},
+      xAxis:{type:'category',data:resBins.map(b=>fmt((b.lo+b.hi)/2,0)),name:'残差',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:10,color:AXIS_COLOR}},
+      yAxis:{type:'value',name:'频次',nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series:[{type:'bar',data:resBins.map(b=>b.count),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#E79A7E'},{offset:1,color:'#D97757'}]),borderRadius:[3,3,0,0]}}],
+      grid:{containLabel:true,left:12,right:12,bottom:28,top:16}
+    });
+  })();
+
+  /* ========== 07 分类分析 ========== */
+  (function(){
+    const cl=D.classification;const modelOrder=['logistic','decision_tree','mlp'];
+    const models=modelOrder.map(k=>{const m=cl.models[k];m.key=k;return m});
+
+    const ch1=reg(initChart('chart-model-compare'));
+    const mts=['accuracy','precision','recall','f1'];
+    const mtCN={accuracy:'准确率',precision:'精确率',recall:'召回率',f1:'F1-Score'};
+    ch1.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{top:0,textStyle:{fontSize:11,color:AXIS_COLOR},itemWidth:14,itemHeight:10},
+      xAxis:{type:'category',data:models.map(m=>m.cn),axisLabel:{fontSize:12,color:AXIS_COLOR}},
+      yAxis:{type:'value',min:0,max:1,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{formatter:v=>pct(v),fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+      series:mts.map((mt,i)=>({name:mtCN[mt],type:'bar',data:models.map(m=>m[mt]),itemStyle:{color:COLORS[i],borderRadius:[4,4,0,0]},barGap:'10%',label:{show:true,position:'top',formatter:p=>pct(p.value),fontSize:10,color:LABEL_COLOR}})),
+      grid:{containLabel:true,left:8,right:8,bottom:12,top:40}
+    });
+
+    document.querySelector('#clf-table tbody').innerHTML=models.map(m=>`<tr><td style="font-weight:500">${m.cn}</td><td>${pct(m.accuracy)}</td><td>${pct(m.precision)}</td><td>${pct(m.recall)}</td><td>${pct(m.f1)}</td></tr>`).join('');
+
+    const tabsEl=document.getElementById('cm-tabs');
+    tabsEl.innerHTML=models.map((m,i)=>`<div class="model-tab ${i===0?'active':''}" onclick="switchCM(${i})">${m.cn}</div>`).join('');
+    const confusionChart=reg(initChart('chart-confusion'));
+
+    function renderCM(idx){
+      const cm=models[idx].confusion;const labels=['低分','高分'];const data=[];let mx=0;
+      for(let i=0;i<2;i++)for(let j=0;j<2;j++){data.push([j,i,cm[i][j]]);mx=Math.max(mx,cm[i][j])}
+      confusionChart.setOption({
+        tooltip:{formatter:p=>'真实: '+labels[p.value[1]]+'<br>预测: '+labels[p.value[0]]+'<br>数量: '+p.value[2]},
+        xAxis:{type:'category',data:labels,name:'预测',position:'bottom',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:13,color:AXIS_COLOR},axisLabel:{fontSize:13,color:LABEL_COLOR}},
+        yAxis:{type:'category',data:labels,name:'真实',nameTextStyle:{fontSize:13,color:AXIS_COLOR},axisLabel:{fontSize:13,color:LABEL_COLOR}},
+        visualMap:{show:false,min:0,max:mx,inRange:{color:['#FBF1EA','#D97757']}},
+        series:[{type:'heatmap',data,label:{show:true,fontSize:20,fontWeight:600,color:LABEL_COLOR,fontFamily:"'Fraunces',serif"},emphasis:{itemStyle:{shadowBlur:10}}}],
+        grid:{containLabel:true,left:8,right:8,bottom:28,top:8}
+      },true);
+    }
+    renderCM(0);
+    window.switchCM=idx=>{tabsEl.querySelectorAll('.model-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));renderCM(idx)};
+
+    const dtM=cl.models.decision_tree;
+    if(dtM.feature_importance){
+      const ch4=reg(initChart('chart-dt-importance'));
+      const fi=dtM.feature_importance;
+      ch4.setOption({
+        tooltip:{formatter:p=>p.name+': '+fmt(p.value,4)},
+        xAxis:{type:'value',name:'重要性',nameLocation:'middle',nameGap:28,nameTextStyle:{fontSize:12,color:AXIS_COLOR},axisLabel:{fontSize:11,color:AXIS_COLOR},splitLine:SPLIT_LINE},
+        yAxis:{type:'category',data:fi.map(f=>f.feature).reverse(),axisLabel:{fontSize:12,color:LABEL_COLOR}},
+        series:[{type:'bar',data:fi.map(f=>f.importance).reverse(),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#D97757'},{offset:1,color:'#E79A7E'}]),borderRadius:[0,4,4,0]},barWidth:22,label:{show:true,position:'right',formatter:p=>fmt(p.value,4),fontSize:11,color:LABEL_COLOR}}],
+        grid:{containLabel:true,left:8,right:64,bottom:24,top:8}
+      });
+    }
+  })();
+
+  /* ========== NAV highlight ========== */
+  (function(){
+    const links=document.querySelectorAll('#nav-links a');
+    const sections=[...links].map(a=>document.querySelector(a.getAttribute('href')));
+    window.addEventListener('scroll',()=>{let cur=0;sections.forEach((s,i)=>{if(s&&s.getBoundingClientRect().top<=120)cur=i});links.forEach((a,i)=>a.classList.toggle('active',i===cur))});
+  })();
+}
+
+/* ========== AI 聊天 ========== */
+let chatHistory=[],chatBusy=false;
+function toggleChat(){document.getElementById('chat-panel').classList.toggle('open');document.getElementById('chat-overlay').classList.toggle('open')}
+function appendMsg(role,html){const el=document.createElement('div');el.className='msg msg-'+(role==='user'?'user':'ai');el.innerHTML=html;document.getElementById('chat-messages').appendChild(el);el.scrollIntoView({behavior:'smooth'});return el}
+async function sendChat(){
+  if(chatBusy)return;const input=document.getElementById('chat-input');const text=input.value.trim();if(!text)return;
+  if(!HAS_DATA){alert('请先上传数据文件');return}
+  const apiBase=document.getElementById('cfg-base').value.trim(),apiKey=document.getElementById('cfg-key').value.trim(),model=document.getElementById('cfg-model').value.trim()||'gpt-4o-mini';
+  if(!apiBase||!apiKey){alert('请先配置 API 地址和密钥');return}
+  input.value='';appendMsg('user',marked.parse(text));chatHistory.push({role:'user',content:text});
+  chatBusy=true;document.getElementById('chat-send-btn').disabled=true;
+  const aiEl=appendMsg('ai','<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>');
+  try{
+    const resp=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_base:apiBase,api_key:apiKey,model,messages:chatHistory})});
+    if(!resp.ok){const err=await resp.json();aiEl.innerHTML='<span style="color:#B47B7B">错误: '+(err.error||'请求失败')+'</span>';chatBusy=false;document.getElementById('chat-send-btn').disabled=false;return}
+    const reader=resp.body.getReader();const decoder=new TextDecoder();let full='';aiEl.innerHTML='';
+    while(true){const rd=await reader.read();if(rd.done)break;const chunk=decoder.decode(rd.value,{stream:true});
+      chunk.split('\n').filter(l=>l.trim()).forEach(line=>{if(line==='data: [DONE]')return;const js=line.startsWith('data: ')?line.slice(6):line;
+        try{const o=JSON.parse(js);const d=o.choices&&o.choices[0]&&o.choices[0].delta&&o.choices[0].delta.content;if(d){full+=d;aiEl.innerHTML=marked.parse(full)}}catch(e){}});
+      aiEl.scrollIntoView({behavior:'smooth'})}
+    if(!full)aiEl.innerHTML='<span style="color:var(--ink-3)">(空响应)</span>';
+    chatHistory.push({role:'assistant',content:full});
+  }catch(e){aiEl.innerHTML='<span style="color:#B47B7B">网络错误: '+e.message+'</span>'}
+  chatBusy=false;document.getElementById('chat-send-btn').disabled=false;
+}
+</script>
+</body>
+</html>
