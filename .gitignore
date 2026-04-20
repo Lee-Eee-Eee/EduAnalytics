@@ -25,6 +25,8 @@ classification_metrics.txt
 regression_metrics.txt
 clustering_scatter.png
 scatter_grade_duration.png
+data_analyse.py
+report/
 
 # ---- LaTeX build artifacts ----
 *.aux
