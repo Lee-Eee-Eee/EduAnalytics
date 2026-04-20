@@ -11,6 +11,9 @@
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![ECharts](https://img.shields.io/badge/ECharts-5.x-AA344D)](https://echarts.apache.org/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?logo=render&logoColor=white)](https://eduanalytics-qpq7.onrender.com/)
+
+🌐 **在线演示**　<https://eduanalytics-qpq7.onrender.com/>　·　无需本地安装，浏览器打开即用
 
 </div>
 
@@ -38,6 +41,9 @@
 | 分类分析 | 逻辑回归 / 决策树 / MLP | 指标对比柱状图、混淆矩阵、特征重要性 |
 
 ## 🚀 快速开始
+
+> 💡 **不想本地安装？** 直接访问线上部署版：<https://eduanalytics-qpq7.onrender.com/>
+> （Render 免费实例首次访问可能需 30 秒左右冷启动，请耐心等待）
 
 ### 方式 A：使用 [uv](https://docs.astral.sh/uv/)（推荐）
 
@@ -86,11 +92,11 @@ python app.py
 
 服务默认监听 `0.0.0.0:5000`，浏览器打开 <http://localhost:5000> 即可看到上传界面。
 
-如需修改端口或绑定地址，可编辑 `app.py` 末尾的 `app.run(...)`，或通过环境变量启动：
+如需修改监听端口，可通过 `PORT` 环境变量启动（与云端部署一致）：
 
 ```bash
-# 例：仅本机可访问，端口 8080
-FLASK_RUN_HOST=127.0.0.1 FLASK_RUN_PORT=8080 flask --app app run
+# 例：监听 8080 端口
+PORT=8080 python app.py
 ```
 
 ### 使用步骤
